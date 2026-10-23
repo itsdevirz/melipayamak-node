@@ -10,7 +10,6 @@ class BaseSoap extends Base {
 
     try {
       let clientPromise = clients.get(url);
-
       if (!clientPromise) {
         clientPromise = soap.createClientAsync(url);
         clients.set(url, clientPromise);
@@ -26,7 +25,6 @@ class BaseSoap extends Base {
       const result = await method.call(client, this.buildPayload(params));
       const payload = Array.isArray(result) ? result[0] : result;
       const key = funcName + 'Result';
-
       return payload && Object.prototype.hasOwnProperty.call(payload, key) ? payload[key] : payload;
     } catch (cause) {
       const error = new Error(cause?.message || 'SOAP request failed', { cause });
