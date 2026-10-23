@@ -8,7 +8,6 @@ const DEFAULT_TIMEOUT = 30_000;
 class Rest extends Base {
   constructor(username, password, options = {}) {
     super(username, password);
-
     this.client = (options.axios || axios).create({
       baseURL: options.baseURL || API_URL,
       timeout: options.timeout ?? DEFAULT_TIMEOUT,
@@ -19,16 +18,13 @@ class Rest extends Base {
 
   async request(method, params = {}) {
     if (typeof method !== 'string' || !method.trim()) throw new TypeError('method must be a non-empty string');
-
     try {
       const { data } = await this.client.post(`/${method}`, this.buildPayload(params));
       return data;
     } catch (cause) {
       const error = new Error(
-        cause?.response
-          ? `Melipayamak API returned HTTP ${cause.response.status}`
-          : cause?.request
-            ? 'No response was received from Melipayamak API'
+        cause?.response ? `Melipayamak API returned HTTP ${cause.response.status}`
+          : cause?.request ? 'No response was received from Melipayamak API'
             : cause?.message || 'Melipayamak request failed',
         { cause }
       );
@@ -53,25 +49,11 @@ class Rest extends Base {
     return this.request('BaseServiceNumber', payload);
   }
 
-  isDelivered(recId) {
-    return this.request('GetDeliveries2', { recId });
-  }
-
-  getMessages(location, index, count, from = '') {
-    return this.request('GetMessages', { location, index, count, from });
-  }
-
-  getCredit() {
-    return this.request('GetCredit');
-  }
-
-  getBasePrice() {
-    return this.request('GetBasePrice');
-  }
-
-  getNumbers() {
-    return this.request('GetUserNumbers');
-  }
+  isDelivered(recId) { return this.request('GetDeliveries2', { recId }); }
+  getMessages(location, index, count, from = '') { return this.request('GetMessages', { location, index, count, from }); }
+  getCredit() { return this.request('GetCredit'); }
+  getBasePrice() { return this.request('GetBasePrice'); }
+  getNumbers() { return this.request('GetUserNumbers'); }
 }
 
 module.exports = Rest;
