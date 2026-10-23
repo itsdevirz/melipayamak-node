@@ -1,32 +1,67 @@
-# Melipayamak API
+const Rest = require('./sms/rest');
+const RestAsync = require('./sms/restAsync');
+const Branch = require('./branch');
+const BranchAsync = require('./branchAsync');
+const Contacts = require('./contacts');
+const ContactsAsync = require('./contactsAsync');
+const Ticket = require('./ticket');
+const TicketAsync = require('./ticketAsync');
+const Users = require('./users');
+const UsersAsync = require('./usersAsync');
 
-A cleaned-up Node.js client for Melipayamak with a modern Axios-based REST implementation.
+class MelipayamakApi {
+  constructor(username, password) {
+    this.username = username;
+    this.password = password;
+  }
 
-## Installation
+  sms(method = 'rest', type = 'async') {
+    if (method === 'soap') {
+      console.warn('SOAP mode is deprecated. This package prefers the Axios-based REST client.');
+    }
 
-```bash
-npm install melipayamak-api
-```
+    if (method !== 'rest' && method !== 'soap') {
+      throw new Error(`Unsupported SMS method: ${method}. Use 'rest' or 'soap'.`);
+    }
 
-## Example
+    if (type === 'sync') {
+      return new Rest(this.username, this.password);
+    }
 
-```js
-const MelipayamakApi = require('melipayamak-api');
+    return new RestAsync(this.username, this.password);
+  }
 
-const api = new MelipayamakApi('username', 'password');
-const sms = api.sms();
+  branch() {
+    return new Branch(this.username, this.password);
+  }
 
-sms.send('09123456789', '5000', 'سلام، این پیام از طریق Axios ارسال شد.')
-  .then((result) => {
-    console.log(result);
-  })
-  .catch((error) => {
-    console.error(error);
-  });
-```
+  branchAsync() {
+    return new BranchAsync(this.username, this.password);
+  }
 
-## Notes
+  contacts() {
+    return new Contacts(this.username, this.password);
+  }
 
-- This version keeps the public API simple and consistent.
-- The REST client is built on Axios and removes the duplicate request boilerplate from the older implementation.
-- Legacy SOAP helpers are still present for compatibility, but the recommended path is the REST client.
+  contactsAsync() {
+    return new ContactsAsync(this.username, this.password);
+  }
+
+  ticket() {
+    return new Ticket(this.username, this.password);
+  }
+
+  ticketAsync() {
+    return new TicketAsync(this.username, this.password);
+  }
+
+  users() {
+    return new Users(this.username, this.password);
+  }
+
+  usersAsync() {
+    return new UsersAsync(this.username, this.password);
+  }
+}
+
+module.exports = MelipayamakApi;

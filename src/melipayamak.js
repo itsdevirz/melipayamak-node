@@ -1,67 +1,115 @@
-const Rest = require('./sms/rest');
-const RestAsync = require('./sms/restAsync');
-const Branch = require('./branch');
-const BranchAsync = require('./branchAsync');
-const Contacts = require('./contacts');
-const ContactsAsync = require('./contactsAsync');
-const Ticket = require('./ticket');
-const TicketAsync = require('./ticketAsync');
-const Users = require('./users');
-const UsersAsync = require('./usersAsync');
+const axios = require('axios');
+const qs = require('node:querystring');
+const Base = require('../base');
 
-class MelipayamakApi {
+class Rest extends Base {
   constructor(username, password) {
-    this.username = username;
-    this.password = password;
+    super(username, password);
+
+    this.client = axios.create({
+      baseURL: 'https://rest.payamak-panel.com/api/SendSMS',
+      timeout: 30000,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      },
+      transformRequest: [(data) => qs.stringify(data)],
+    });
   }
 
-  sms(method = 'rest', type = 'async') {
-    if (method === 'soap') {
-      console.warn('SOAP mode is deprecated. This package prefers the Axios-based REST client.');
+  async request(method, params = {}) {
+    try {
+      const payload = this.buildPayload(params);
+      const { data } = await this.client.post(`/${method}`, payload);
+      return data;
+    } catch (error) {
+      throw this._normalizeError(error);
+    }
+  }
+
+  _normalizeError(error) {
+    if (error.response) {
+      return {
+        status: error.response.status,
+        data: error.response.data,
+        message: error.message,
+      };
     }
 
-    if (method !== 'rest' && method !== 'soap') {
-      throw new Error(`Unsupported SMS method: ${method}. Use 'rest' or 'soap'.`);
+    if (error.request) {
+      return {
+        message: 'No response was received from Melipayamak API.',
+        request: error.request,
+      };
     }
 
-    if (type === 'sync') {
-      return new Rest(this.username, this.password);
+    return {
+      message: error.message,
+    };
+  }
+
+  async send(payloadOrTo, from, text, isFlash = false) {
+    const payload = this._normalizeSendPayload(payloadOrTo, from, text, isFlash);
+    return this.request('SendSMS', payload);
+  }
+
+  async sendByBaseNumber(payloadOrText, to, bodyId) {
+    const payload = this._normalizeBaseNumberPayload(payloadOrText, to, bodyId);
+    return this.request('BaseServiceNumber', payload);
+  }
+
+  async isDelivered(recId) {
+    return this.request('GetDeliveries2', { recId });
+  }
+
+  async getMessages(location, index, count, from = '') {
+    return this.request('GetMessages', { location, index, count, from });
+  }
+
+  async getCredit() {
+    return this.request('GetCredit', {});
+  }
+
+  async getBasePrice() {
+    return this.request('GetBasePrice', {});
+  }
+
+  async getNumbers() {
+    return this.request('GetUserNumbers', {});
+  }
+
+  _normalizeSendPayload(payloadOrTo, from, text, isFlash) {
+    if (typeof payloadOrTo === 'object' && payloadOrTo !== null) {
+      return {
+        to: payloadOrTo.to,
+        from: payloadOrTo.from,
+        text: payloadOrTo.text,
+        isFlash: payloadOrTo.isFlash ?? isFlash,
+      };
     }
 
-    return new RestAsync(this.username, this.password);
+    return {
+      to: payloadOrTo,
+      from,
+      text,
+      isFlash,
+    };
   }
 
-  branch() {
-    return new Branch(this.username, this.password);
-  }
+  _normalizeBaseNumberPayload(payloadOrText, to, bodyId) {
+    if (typeof payloadOrText === 'object' && payloadOrText !== null) {
+      return {
+        text: payloadOrText.text,
+        to: payloadOrText.to,
+        bodyId: payloadOrText.bodyId,
+      };
+    }
 
-  branchAsync() {
-    return new BranchAsync(this.username, this.password);
-  }
-
-  contacts() {
-    return new Contacts(this.username, this.password);
-  }
-
-  contactsAsync() {
-    return new ContactsAsync(this.username, this.password);
-  }
-
-  ticket() {
-    return new Ticket(this.username, this.password);
-  }
-
-  ticketAsync() {
-    return new TicketAsync(this.username, this.password);
-  }
-
-  users() {
-    return new Users(this.username, this.password);
-  }
-
-  usersAsync() {
-    return new UsersAsync(this.username, this.password);
+    return {
+      text: payloadOrText,
+      to,
+      bodyId,
+    };
   }
 }
 
-module.exports = MelipayamakApi;
+module.exports = Rest;
