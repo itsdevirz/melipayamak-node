@@ -1,3 +1,1 @@
-let MelipayamakApi = require('./src/melipayamak');
-
-module.exports = MelipayamakApi;
+module.exports = require('./src/melipayamak');

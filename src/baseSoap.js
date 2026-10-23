@@ -1,38 +1,38 @@
-var Base = require('./base')
-var soap = require('soap');
-
+const soap = require('soap');
+const Base = require('./base');
 
 class BaseSoap extends Base {
+  async executeAsync(url, funcName, params = {}) {
+    try {
+      const client = await soap.createClientAsync(url);
+      const result = await client[`${funcName}Async`](params);
+      const payload = Array.isArray(result) ? result[0] : result;
 
-    executeAsync(url, funcName, params, returnResult = true) {
-        return new Promise((resolve, reject) => {
-            soap.createClientAsync(url).then((client) => {
-                return client[funcName + 'Async'](params);
-            }).then((result) => {
-                returnResult ? resolve(result[0][funcName + 'Result']) : resolve(result[0]);
+      if (payload && payload[`${funcName}Result`] !== undefined) {
+        return payload[`${funcName}Result`];
+      }
 
-            }).catch(err => {
-                reject(err)
-            });
-        })
+      return payload;
+    } catch (error) {
+      throw this._normalizeError(error);
+    }
+  }
 
+  async execute(url, funcName, params = {}) {
+    return this.executeAsync(url, funcName, params);
+  }
+
+  getPath(method) {
+    return `http://api.payamak-panel.com/post/${method}.asmx?wsdl`;
+  }
+
+  _normalizeError(error) {
+    if (error && error.message) {
+      return error;
     }
 
-
-    execute(url, funcName, params) {
-        soap.createClient(url, function(err, client) {
-            client[funcName](params, function(err, result) {
-                if(err)
-                    console.log(err);
-                else console.log(result);
-            });
-        });
-
-    }
-
-    getPath(method) {
-        return `http://api.payamak-panel.com/post/${method}.asmx?wsdl`;
-    }
+    return new Error('SOAP request failed');
+  }
 }
 
 module.exports = BaseSoap;
