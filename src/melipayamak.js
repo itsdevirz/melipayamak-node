@@ -1,6 +1,6 @@
 const axios = require('axios');
 const qs = require('node:querystring');
-const Base = require('../base');
+const Base = require('./base');
 
 class Rest extends Base {
   constructor(username, password) {
