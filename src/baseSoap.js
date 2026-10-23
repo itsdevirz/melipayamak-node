@@ -1,37 +1,45 @@
 const soap = require('soap');
 const Base = require('./base');
 
+const clients = new Map();
+
 class BaseSoap extends Base {
   async executeAsync(url, funcName, params = {}) {
-    try {
-      const client = await soap.createClientAsync(url);
-      const result = await client[`${funcName}Async`](params);
-      const payload = Array.isArray(result) ? result[0] : result;
+    if (typeof url !== 'string' || !url) throw new TypeError('url must be a non-empty string');
+    if (typeof funcName !== 'string' || !funcName) throw new TypeError('funcName must be a non-empty string');
 
-      if (payload && payload[`${funcName}Result`] !== undefined) {
-        return payload[`${funcName}Result`];
+    try {
+      let clientPromise = clients.get(url);
+      if (!clientPromise) {
+        clientPromise = soap.createClientAsync(url);
+        clients.set(url, clientPromise);
+        clientPromise.catch(() => {
+          if (clients.get(url) === clientPromise) clients.delete(url);
+        });
       }
 
-      return payload;
-    } catch (error) {
-      throw this._normalizeError(error);
+      const client = await clientPromise;
+      const method = client[funcName + 'Async'];
+      if (typeof method !== 'function') throw new Error(`SOAP method "${funcName}" is not available`);
+
+      const result = await method.call(client, this.buildPayload(params));
+      const payload = Array.isArray(result) ? result[0] : result;
+      const key = funcName + 'Result';
+      return payload && Object.prototype.hasOwnProperty.call(payload, key) ? payload[key] : payload;
+    } catch (cause) {
+      const error = new Error(cause?.message || 'SOAP request failed', { cause });
+      error.code = cause?.code;
+      error.status = cause?.response?.statusCode;
+      throw error;
     }
   }
 
-  async execute(url, funcName, params = {}) {
+  execute(url, funcName, params = {}) {
     return this.executeAsync(url, funcName, params);
   }
 
   getPath(method) {
     return `http://api.payamak-panel.com/post/${method}.asmx?wsdl`;
-  }
-
-  _normalizeError(error) {
-    if (error && error.message) {
-      return error;
-    }
-
-    return new Error('SOAP request failed');
   }
 }
 

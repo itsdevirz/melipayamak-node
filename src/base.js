@@ -1,7 +1,11 @@
 class Base {
   constructor(username, password) {
-    if (!username || !password) {
-      throw new Error('username and password are required');
+    if (typeof username !== 'string' || !username.trim()) {
+      throw new TypeError('username must be a non-empty string');
+    }
+
+    if (typeof password !== 'string' || !password) {
+      throw new TypeError('password must be a non-empty string');
     }
 
     this.username = username;
@@ -10,10 +14,11 @@ class Base {
   }
 
   buildPayload(params = {}) {
-    return {
-      ...this.data,
-      ...params,
-    };
+    if (!params || typeof params !== 'object' || Array.isArray(params)) {
+      throw new TypeError('params must be an object');
+    }
+
+    return { ...params, username: this.username, password: this.password };
   }
 }
 
